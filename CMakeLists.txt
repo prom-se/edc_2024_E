@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.5.0)
+project(chess_slover VERSION 0.1.0 LANGUAGES C CXX)
+
+find_package(OpenCV REQUIRED)
+find_package(CSerialPort REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${CSerialPort_INCLUDE_DIR})
+include_directories("/usr/include/eigen3/")
+add_executable(chess_slover chess_slover.cpp)
+target_link_libraries(chess_slover ${OpenCV_LIBS} ${CSerialPort_LIBRARY})

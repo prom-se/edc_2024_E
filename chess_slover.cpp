@@ -157,15 +157,17 @@ namespace edc
 
         void find_board()
         {
-            show_ = src_.clone();
-            std::thread chess_finder(std::bind(&edc::Board::detect_chess, board_.get(), show_));
             // 预处理
-            cv::Mat hsv(cv::Mat::zeros(720, 1280, CV_8UC1));
+            cv::Mat undistort;
+            cv::undistort(src_, undistort, cv::Mat(3, 3, CV_64FC1, const_cast<double *>(camera_matrix.data())), cv::Mat(1, 5, CV_64FC1, const_cast<double *>(dist_coeffs.data())));
+            show_=undistort.clone();
+            std::thread chess_finder(std::bind(&edc::Board::detect_chess, board_.get(), show_));
+            cv::Mat lab(cv::Mat::zeros(720, 1280, CV_8UC3));
             cv::Mat bin(cv::Mat::zeros(720, 1280, CV_8UC1));
             cv::Mat draw(cv::Mat::zeros(720, 1280, CV_8UC1));
-            cv::cvtColor(src_, hsv, cv::COLOR_BGR2Lab);
-            cv::inRange(hsv, cv::Scalar(low[0], low[1], low[2]), cv::Scalar(high[0], high[1], high[2]), bin);
-            cv::threshold(bin, bin, 0, 255, cv::THRESH_BINARY_INV);
+            cv::cvtColor(src_.clone(), lab, cv::COLOR_BGR2Lab);
+            cv::inRange(lab, cv::Scalar(low[0], low[1], low[2]), cv::Scalar(high[0], high[1], high[2]), bin);
+            cv::threshold(bin.clone(), bin, 0, 255, cv::THRESH_BINARY_INV);
             cv::morphologyEx(bin.clone(), bin, cv::MORPH_CLOSE, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5)));
             std::vector<std::vector<cv::Point2i>> contours;
             cv::findContoursLinkRuns(bin, contours);
@@ -222,7 +224,7 @@ namespace edc
                 // cv::putText(show_, "2", pts[2], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
                 // cv::putText(show_, "3", pts[3], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 #endif
-                board_->build_board(pts, src_);
+                board_->build_board(pts);
                 break;
             }
             if (chess_finder.joinable())

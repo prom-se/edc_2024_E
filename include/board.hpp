@@ -51,16 +51,19 @@ namespace edc
         cv::Point3d(30, 30, 0),
     };
 
+    const std::array<cv::Point2d, 4> fix_point = {
+        cv::Point2d(300, 24),
+        cv::Point2d(1238, 12),
+        cv::Point2d(307, 428),
+        cv::Point2d(1237, 421),
+    };
+
     const double dis2cam = 240; // mm
 
     const std::array<double, 9> camera_matrix{777.709521106825, 0, 646.907918000159,
                                               0, 776.767897082737, 373.891934779883,
                                               0, 0, 1};
     const std::array<double, 5> dist_coeffs{0.113281809309809, -0.140465800226699, 0, 0, 0};
-
-    const std::vector<cv::Point2f> transform_points =
-        {
-            cv::Point2f(0, 900), cv::Point2f(0, 0), cv::Point2f(900, 0), cv::Point2f(900, 900)};
 
     class Chess
     {
@@ -101,7 +104,7 @@ namespace edc
             transform_board_ = cv::Mat(cv::Size(900, 900), CV_8UC3);
         };
 
-        void build_board(std::vector<cv::Point2f> key_points, cv::Mat src)
+        void build_board(std::vector<cv::Point2f> key_points)
         {
             key_points_ = key_points;
             center_ = (key_points[0] + key_points[1] + key_points[2] + key_points[3]) / 4;
@@ -118,15 +121,9 @@ namespace edc
             cam2board_.x = tvec.at<double>(0);
             cam2board_.y = tvec.at<double>(1);
             cam2board_.z = tvec.at<double>(2);
-            auto transform_mat_ = cv::getPerspectiveTransform(key_points, transform_points);
-            cv::warpPerspective(src, transform_board_, transform_mat_, transform_board_.size());
-#ifdef DEBUG
-            // cv::imshow("debug", transform_board_);
-            std::cout << cam2board_.x << '/' << cam2board_.y << '/' << cam2board_.z << '/' << theta_ << std::endl;
-#endif
         };
 
-        void static detect_chess(edc::Board *self, cv::Mat &src)
+        void static detect_chess(edc::Board *self, cv::Mat src)
         {
             if (self->key_points_.empty())
             {
@@ -134,7 +131,7 @@ namespace edc
             }
             self->black_chesses_.clear();
             self->white_chesses_.clear();
-            auto detections = self->net_.runInference(src);
+            auto detections = self->net_.runInference(src.clone());
             for (auto &detection : detections)
             {
 #ifdef DEBUG
@@ -251,6 +248,11 @@ namespace edc
                 return get_dst_by_color(edc::BLACK);
             }
         }
+
+        cv::Point2d remap_position(const cv::Point2d pix_pt){
+            //26.4 12.5 
+        }
+
         cv::Point2d get_position(uint8_t index)
         {
             double x = (cam2board_ + board2pos[index] - cam2org).x;

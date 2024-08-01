@@ -37,7 +37,7 @@ namespace edc
     };
 
     const cv::Point3d cam2org = {
-        -92, -95, 0};
+        -107.2, -106.7, 0};
 
     const std::array<cv::Point3d, 9> board2pos = {
         cv::Point3d(-30, -30, 0),

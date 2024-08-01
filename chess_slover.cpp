@@ -59,6 +59,8 @@ namespace edc
             cam_.set(cv::CAP_PROP_FPS, 60);
             cam_.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);
             cam_.set(cv::CAP_PROP_EXPOSURE, 400);
+            cam_.set(cv::CAP_PROP_AUTO_WB, 1);
+            // cam_.set(cv::CAP_PROP_WB_TEMPERATURE,4850);
 #ifdef DEBUG
             // cv::namedWindow("src");
             cv::namedWindow("debug");
@@ -89,11 +91,63 @@ namespace edc
             {
                 try
                 {
+                    serial_->get_robot(robot_);
                     uint8_t chesses[9];
                     float angle;
-                    VisionMsg msg;
-                    msg.head = 0xA5;
-                    serial_->vision_update(msg);
+                    vision_.head = 0xA5;
+                    uint8_t black, white;
+
+                    cv::Point2d point = board_->get_src_chess(board_->get_self_color());
+                    vision_.chess_x = point.x == 0 ? vision_.chess_x : point.x;
+                    vision_.chess_y = point.y == 0 ? vision_.chess_y : point.y;
+                    if (robot_.task == 0x00)
+                    {
+                        vision_.dst_x = board_->get_position(board_->get_dst()).x;
+                        vision_.dst_y = board_->get_position(board_->get_dst()).y;
+                    }
+                    else if (robot_.task == 0x01)
+                    {
+                        vision_.dst_x = board_->get_position(board_->get_dst_by_color(edc::BLACK)).x;
+                        vision_.dst_y = board_->get_position(board_->get_dst_by_color(edc::BLACK)).y;
+                    }
+                    else if (robot_.task == 0x02)
+                    {
+                        vision_.dst_x = board_->get_position(board_->get_dst_by_color(edc::WHITE)).x;
+                        vision_.dst_y = board_->get_position(board_->get_dst_by_color(edc::WHITE)).y;
+                    }
+                    else if (robot_.task == 0x03)
+                    {
+                        cv::Point2d src(0,0);
+                        cv::Point2d dst(0,0);
+                        uint8_t src_index=0;
+                        uint8_t dst_index=0;
+                        board_->get_diff(src_index,dst_index);
+                        src = board_->get_position(src_index);
+                        dst = board_->get_position(dst_index);
+                        vision_.chess_x = src.x == 0 ? vision_.chess_x : src.x;
+                        vision_.chess_y = src.y == 0 ? vision_.chess_y : src.y;
+                        vision_.dst_x = dst.x;
+                        vision_.dst_y = dst.y;
+                    }
+                    if (vision_.chess_x < 0)
+                    {
+                        vision_.chess_x = 0;
+                    }
+                    if (vision_.chess_y < 0)
+                    {
+                        vision_.chess_y = 0;
+                    }
+                    if (vision_.dst_x < 0)
+                    {
+                        vision_.dst_x = 0;
+                    }
+                    if (vision_.dst_y < 0)
+                    {
+                        vision_.dst_y = 0;
+                    }
+                    std::cout << "src:" << vision_.chess_x << '/' << vision_.chess_y << '/';
+                    std::cout << "dst" << vision_.dst_x << '/' << vision_.dst_y << std::endl;
+                    serial_->update_vision(vision_);
                 }
                 catch (std::exception &ex)
                 {
@@ -104,15 +158,15 @@ namespace edc
         void find_board()
         {
             show_ = src_.clone();
-            std::thread chess_finder(std::bind(&edc::Board::detect_chess, board_.get(), src_.clone()));
+            std::thread chess_finder(std::bind(&edc::Board::detect_chess, board_.get(), show_));
             // 预处理
             cv::Mat hsv(cv::Mat::zeros(720, 1280, CV_8UC1));
             cv::Mat bin(cv::Mat::zeros(720, 1280, CV_8UC1));
             cv::Mat draw(cv::Mat::zeros(720, 1280, CV_8UC1));
-            cv::cvtColor(src_, hsv, cv::COLOR_BGR2HSV_FULL);
+            cv::cvtColor(src_, hsv, cv::COLOR_BGR2Lab);
             cv::inRange(hsv, cv::Scalar(low[0], low[1], low[2]), cv::Scalar(high[0], high[1], high[2]), bin);
-            cv::threshold(bin, bin, 0, 255, cv::THRESH_BINARY);
-            cv::morphologyEx(bin.clone(), bin, cv::MORPH_CLOSE, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15, 15)));
+            cv::threshold(bin, bin, 0, 255, cv::THRESH_BINARY_INV);
+            cv::morphologyEx(bin.clone(), bin, cv::MORPH_CLOSE, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5)));
             std::vector<std::vector<cv::Point2i>> contours;
             cv::findContoursLinkRuns(bin, contours);
             std::array<cv::Point2f, 4> pts;
@@ -120,6 +174,10 @@ namespace edc
             {
                 // 面积筛选
                 auto rect = cv::minAreaRect(contour);
+                if (abs(rect.size.width / rect.size.height - 1) > 0.15)
+                {
+                    continue;
+                }
                 if (rect.size.area() > 600 * 600)
                 {
                     continue;
@@ -152,16 +210,17 @@ namespace edc
                 std::sort(right.begin(), right.end(), [](const auto &a, const auto &b)
                           { return a.y < b.y; });
                 pts = std::vector<cv::Point2f>{left[0], right[0], right[1], left[1]};
+                rect.points(pts);
 
 #ifdef DEBUG
-                // cv::line(show_, pts[0], pts[1], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-                // cv::line(show_, pts[1], pts[2], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-                // cv::line(show_, pts[2], pts[3], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-                // cv::line(show_, pts[3], pts[0], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-                cv::putText(show_, "0", pts[0], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-                cv::putText(show_, "1", pts[1], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-                cv::putText(show_, "2", pts[2], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-                cv::putText(show_, "3", pts[3], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+                cv::line(show_, pts[0], pts[1], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                cv::line(show_, pts[1], pts[2], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                cv::line(show_, pts[2], pts[3], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                cv::line(show_, pts[3], pts[0], cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                // cv::putText(show_, "0", pts[0], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+                // cv::putText(show_, "1", pts[1], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+                // cv::putText(show_, "2", pts[2], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+                // cv::putText(show_, "3", pts[3], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 #endif
                 board_->build_board(pts, src_);
                 break;
@@ -172,7 +231,7 @@ namespace edc
             }
             uint8_t black = 9;
             uint8_t white = 9;
-            board_->solve_game(black, white);
+            board_->solve_game(black, white, robot_.task);
 #ifdef DEBUG
             cv::putText(show_, cv::format("BLACK:%d", black), cv::Point2i(50, 50), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
             cv::putText(show_, cv::format("WHITE:%d", white), cv::Point2i(50, 100), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
@@ -180,12 +239,14 @@ namespace edc
             cv::imshow("show", show_);
 #endif
         };
-        int low[3] = {110, 55, 0};
-        int high[3] = {255, 255, 255};
+        int low[3] = {89, 43, 0};
+        int high[3] = {255, 185, 183};
         cv::Mat show_;
         cv::Mat src_;
         std::string cam_name_;
         cv::VideoCapture cam_;
+        VisionMsg vision_;
+        RobotMsg robot_;
         std::shared_ptr<std::thread> camera_stream_;
         std::shared_ptr<std::thread> serial_driver_;
         std::shared_ptr<std::thread> board_finder_;

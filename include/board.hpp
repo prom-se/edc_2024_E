@@ -142,8 +142,8 @@ namespace edc
         void build_board(std::vector<cv::Point2f> &key_points, cv::RotatedRect &rect)
         {
             angle = rect.angle;
-            size.width = rect.size.width * 2 / 3;
-            size.height = rect.size.height * 2 / 3;
+            rect.size.width = rect.size.width * 2.0 / 3.0;
+            rect.size.height = rect.size.height * 2.0 / 3.0;
             init_board_pos(rect);
             key_points_ = key_points;
             center = (key_points[0] + key_points[1] + key_points[2] + key_points[3]) / 4;
@@ -184,7 +184,7 @@ namespace edc
                 cv::putText(src, detection.className, detection.box.tl(), cv::LINE_AA, 2, detection.color);
                 cv::rectangle(src, detection.box, detection.color);
 #endif
-                cv::Point2f pix_pt(detection.box.x + detection.box.width / 2,
+                cv::Point2d pix_pt(detection.box.x + detection.box.width / 2,
                                    detection.box.y + detection.box.height / 2);
 
                 cv::Point2d chess_pos;
@@ -197,7 +197,7 @@ namespace edc
                     std::vector<double> dis(9);
                     for (size_t i = 0; i < 9; i++)
                     {
-                        dis[i] = cv::norm(chess_pos - self->get_position(i));
+                        dis[i] = cv::norm(pix_pt - self->get_position(i));
                     }
                     index = std::distance(dis.begin(), std::min_element(dis.begin(), dis.end()));
                 }

@@ -98,11 +98,11 @@ namespace edc
                     float angle;
                     vision_.head = 0xA5;
                     uint8_t black, white;
-                    cv::Point2d fix{-3, -1};
+                    cv::Point2d fix{-5, 5};
                     cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
                     point += fix;
                     vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
-                    vision_.chess_y = point.y > 0 ? point.y : vision_.chess_y;
+                    vision_.chess_y = point.y > 5 ? point.y : vision_.chess_y;
                     if (robot_.task == 0x00)
                     {
                         vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst())).x;
@@ -133,8 +133,8 @@ namespace edc
                         vision_.dst_x = dst.x;
                         vision_.dst_y = dst.y;
                     }
-                    vision_.dst_x += fix.x - 10;
-                    vision_.dst_y += fix.y - 5;
+                    vision_.dst_x += fix.x + 5;
+                    vision_.dst_y += fix.y - 3;
                     if (vision_.chess_x < 0)
                     {
                         vision_.chess_x = 0;
@@ -267,7 +267,7 @@ namespace edc
 
 int main(int argc, char *argv[])
 {
-    std::string dev_name = "/dev/video2";
+    std::string dev_name = "/dev/video0";
     if (argc > 1)
     {
         dev_name = argv[1];

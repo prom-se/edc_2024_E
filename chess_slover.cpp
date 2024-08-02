@@ -105,18 +105,18 @@ namespace edc
                     vision_.chess_y = point.y > 0 ? point.y : vision_.chess_y;
                     if (robot_.task == 0x00)
                     {
-                        vision_.dst_x = board_->get_position(board_->get_dst()).x;
-                        vision_.dst_y = board_->get_position(board_->get_dst()).y;
+                        vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst())).x;
+                        vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst())).y;
                     }
                     else if (robot_.task == 0x01)
                     {
-                        vision_.dst_x = board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1).x;
-                        vision_.dst_y = board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1).y;
+                        vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1)).x;
+                        vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1)).y;
                     }
                     else if (robot_.task == 0x02)
                     {
-                        vision_.dst_x = board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1).x;
-                        vision_.dst_y = board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1).y;
+                        vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1)).x;
+                        vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1)).y;
                     }
                     else if (robot_.task == 0x03)
                     {
@@ -125,8 +125,8 @@ namespace edc
                         uint8_t src_index = 0;
                         uint8_t dst_index = 0;
                         board_->get_diff(src_index, dst_index);
-                        src = board_->get_position(src_index);
-                        dst = board_->get_position(dst_index);
+                        src = board_->remap_position(board_->get_position(src_index));
+                        dst = board_->remap_position(board_->get_position(dst_index));
                         src += fix;
                         vision_.chess_x = src.x > 0 ? src.x : vision_.chess_x;
                         vision_.chess_y = src.y > 0 ? src.y : vision_.chess_y;

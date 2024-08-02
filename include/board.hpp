@@ -127,6 +127,7 @@ namespace edc
             auto rpy = rotation_matrix.eulerAngles(2, 1, 0);
             theta_ = rpy[0] / CV_PI * 180.0;
             theta_ = theta_ > 90 ? theta_ - 180 : theta_;
+            theta_ = theta_ < -45 ? theta_ + 90 : theta_;
             cam2board_.x = tvec.at<double>(0);
             cam2board_.y = tvec.at<double>(1);
             cam2board_.z = tvec.at<double>(2);
@@ -164,7 +165,7 @@ namespace edc
                     std::vector<double> dis(9);
                     for (size_t i = 0; i < 9; i++)
                     {
-                        dis[i] = cv::norm(chess_pos - self->get_pnp_position(i));
+                        dis[i] = cv::norm(chess_pos - self->get_position(i));
                     }
                     index = std::distance(dis.begin(), std::min_element(dis.begin(), dis.end()));
                 }
@@ -279,12 +280,16 @@ namespace edc
 
         cv::Point2d get_pnp_position(uint8_t index)
         {
-            double x = (cam2board_ + board2pos[index]).x;
-            double y = (cam2board_ + board2pos[index]).y;
+            if (rvec_.empty() || tvec_.empty())
+            {
+                return cv::Point2d(0, 0);
+            }
+            double x = cam2board_.x + (cv::norm(board2pos[index]) * cos(theta_));
+            double y = cam2board_.y + (cv::norm(board2pos[index]) * sin(theta_));
             double z = cam2board_.z;
-            std::vector<cv::Point3f> pt{cv::Point3f(x,y,z)};
-            std::vector<cv::Point3f> img_pt;
-            cv::projectPoints(pt,rvec_,tvec_,camera_matrix_,dist_coeffs_,img_pt);
+            std::vector<cv::Point3f> pt{cv::Point3f(x, y, z)};
+            std::vector<cv::Point2f> img_pt(1);
+            cv::projectPoints(pt, rvec_, tvec_, camera_matrix_, dist_coeffs_, img_pt);
             return cv::Point2d(img_pt[0].x, img_pt[0].y);
         };
 

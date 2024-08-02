@@ -284,8 +284,8 @@ namespace edc
             {
                 return cv::Point2d(0, 0);
             }
-            double x = cam2board_.x + (cv::norm(board2pos[index]) * cos(theta_));
-            double y = cam2board_.y + (cv::norm(board2pos[index]) * sin(theta_));
+            double x = (cam2board_ + (board2pos[index] * cos(theta_))).x;
+            double y = (cam2board_ + (board2pos[index] * sin(theta_))).y;
             double z = cam2board_.z;
             std::vector<cv::Point3f> pt{cv::Point3f(x, y, z)};
             std::vector<cv::Point2f> img_pt(1);
@@ -295,8 +295,8 @@ namespace edc
 
         cv::Point2d get_position(uint8_t index)
         {
-            double x = (cam2board_ + board2pos[index] - cam2org).x;
-            double y = (cam2board_ + board2pos[index] - cam2org).y;
+            double x = cam2board_.x + (cv::norm(board2pos[index]) * cos(theta_)) - cam2org.x;
+            double y = cam2board_.y + (cv::norm(board2pos[index]) * cos(theta_)) - cam2org.y;
             return cv::Point2d(x, y);
         };
 

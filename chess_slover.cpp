@@ -98,9 +98,9 @@ namespace edc
                     float angle;
                     vision_.head = 0xA5;
                     uint8_t black, white;
-                    cv::Point2d fix{0,0};
+                    cv::Point2d fix{-3,-1};
                     cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
-                    point -= fix;
+                    point += fix;
                     vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
                     vision_.chess_y = point.y > 0 ? point.y : vision_.chess_y;
                     if (robot_.task == 0x00)
@@ -127,15 +127,14 @@ namespace edc
                         board_->get_diff(src_index, dst_index);
                         src = board_->get_position(src_index);
                         dst = board_->get_position(dst_index);
-                        src.x -= 0;
-                        src.y -= 0;
+                        src += fix;
                         vision_.chess_x = src.x > 0 ? src.x : vision_.chess_x;
                         vision_.chess_y = src.y > 0 ? src.y : vision_.chess_y;
                         vision_.dst_x = dst.x;
                         vision_.dst_y = dst.y;
                     }
-                    vision_.dst_x -= fix.x;
-                    vision_.dst_y -= fix.y;
+                    vision_.dst_x += fix.x - 10;
+                    vision_.dst_y += fix.y - 5;
                     if (vision_.chess_x < 0)
                     {
                         vision_.chess_x = 0;

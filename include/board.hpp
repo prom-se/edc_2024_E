@@ -102,7 +102,7 @@ namespace edc
     class Board : public cv::RotatedRect
     {
     public:
-        Board() : cam2board_{cv::Point3d()}, net_{Inference("../model/chess.onnx", cv::Size(640, 640))},
+        Board() : cam2board_{cv::Point3d()}, net_{Inference("../model/chess_16_42.onnx", cv::Size(640, 640))},
                   new_chess_map_{cv::Mat(3, 3, CV_8UC1)}, now_chess_map_{cv::Mat(3, 3, CV_8UC1)},
                   black_score_{cv::Mat(3, 3, CV_8SC1)}, white_score_{cv::Mat(3, 3, CV_8SC1)}
         {

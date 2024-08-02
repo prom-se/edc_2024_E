@@ -51,6 +51,11 @@ namespace edc
         cv::Point3d(32, 32, 0),
     };
 
+    const std::array<double, 2> board_dis = {
+        45.25483,
+        32,
+    };
+
     // TODO：undistort
     const std::array<cv::Point2d, 4> fix_point = {
         cv::Point2d(300, 24),
@@ -295,8 +300,19 @@ namespace edc
 
         cv::Point2d get_position(uint8_t index)
         {
-            double x = cam2board_.x + (cv::norm(board2pos[index]) * cos(theta_)) - cam2org.x;
-            double y = cam2board_.y + (cv::norm(board2pos[index]) * cos(theta_)) - cam2org.y;
+            double dis = board_dis[index%2];
+            std::array<double, 9> thetas={
+                135,90,45,
+                180,0,0,
+                -135,-90,-45
+            };
+            theta_ = thetas[index];
+            if(index==4){
+                dis=0;
+                theta_=0;
+            }
+            double x = cam2board_.x + (dis * cos(theta_)) - cam2org.x;
+            double y = cam2board_.y - (dis * sin(theta_)) - cam2org.y;
             return cv::Point2d(x, y);
         };
 

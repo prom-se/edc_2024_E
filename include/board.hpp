@@ -109,17 +109,43 @@ namespace edc
     public:
         Board() : cam2board_{cv::Point3d()}, net_{Inference("../model/chess_16_42.onnx", cv::Size(640, 640))},
                   new_chess_map_{cv::Mat(3, 3, CV_8UC1)}, now_chess_map_{cv::Mat(3, 3, CV_8UC1)},
-                  black_score_{cv::Mat(3, 3, CV_8SC1)}, white_score_{cv::Mat(3, 3, CV_8SC1)}
+                  black_score_{cv::Mat(3, 3, CV_8SC1)}, white_score_{cv::Mat(3, 3, CV_8SC1)},
+                  board_pix_pos_{std::vector<cv::Point2f>(9)}
         {
             cv::Mat(3, 3, CV_64FC1, const_cast<double *>(camera_matrix.data())).copyTo(camera_matrix_);
             cv::Mat(1, 5, CV_64FC1, const_cast<double *>(dist_coeffs.data())).copyTo(dist_coeffs_);
             transform_board_ = cv::Mat(cv::Size(900, 900), CV_8UC3);
         };
 
-        void build_board(std::vector<cv::Point2f> key_points)
+        void init_board_pos(cv::RotatedRect &rect)
         {
+            std::vector<cv::Point2f> board_pix_pos(9);
+            std::vector<cv::Point2f> corner(4);
+            std::vector<cv::Point2f> middle(4);
+            rect.points(corner);
+            middle[0] = (corner[1] + corner[2]) / 2;
+            middle[1] = (corner[0] + corner[1]) / 2;
+            middle[2] = (corner[2] + corner[3]) / 2;
+            middle[3] = (corner[0] + corner[3]) / 2;
+            board_pix_pos[0] = corner[1];
+            board_pix_pos[1] = middle[0];
+            board_pix_pos[2] = corner[2];
+            board_pix_pos[3] = middle[1];
+            board_pix_pos[4] = rect.center;
+            board_pix_pos[5] = middle[2];
+            board_pix_pos[6] = corner[0];
+            board_pix_pos[7] = middle[3];
+            board_pix_pos[8] = corner[3];
+            board_pix_pos_ = board_pix_pos;
+        }
+
+        void build_board(std::vector<cv::Point2f> &key_points, cv::RotatedRect &rect)
+        {
+            angle = rect.angle;
+            size = rect.size;
+            init_board_pos(rect);
             key_points_ = key_points;
-            center_ = (key_points[0] + key_points[1] + key_points[2] + key_points[3]) / 4;
+            center = (key_points[0] + key_points[1] + key_points[2] + key_points[3]) / 4;
             cv::Mat tvec = cv::Mat_<double>(1, 3);
             cv::Mat rvec = cv::Mat_<double>(1, 3);
             cv::solvePnP(real_size_, key_points, camera_matrix_, dist_coeffs_, rvec, tvec, false, cv::SOLVEPNP_IPPE_SQUARE);
@@ -298,22 +324,27 @@ namespace edc
             return cv::Point2d(img_pt[0].x, img_pt[0].y);
         };
 
+        // cv::Point2d get_position(uint8_t index)
+        // {
+        //     double dis = board_dis[index % 2];
+        //     std::array<double, 9> thetas = {
+        //         135, 90, 45,
+        //         180, 0, 0,
+        //         -135, -90, -45};
+        //     theta_ = thetas[index];
+        //     if (index == 4)
+        //     {
+        //         dis = 0;
+        //         theta_ = 0;
+        //     }
+        //     double x = cam2board_.x + (dis * cos(theta_)) - cam2org.x;
+        //     double y = cam2board_.y - (dis * sin(theta_)) - cam2org.y;
+        //     return cv::Point2d(x, y);
+        // };
+
         cv::Point2d get_position(uint8_t index)
         {
-            double dis = board_dis[index%2];
-            std::array<double, 9> thetas={
-                135,90,45,
-                180,0,0,
-                -135,-90,-45
-            };
-            theta_ = thetas[index];
-            if(index==4){
-                dis=0;
-                theta_=0;
-            }
-            double x = cam2board_.x + (dis * cos(theta_)) - cam2org.x;
-            double y = cam2board_.y - (dis * sin(theta_)) - cam2org.y;
-            return cv::Point2d(x, y);
+            return board_pix_pos_[index];
         };
 
         cv::Point2d get_src_chess(edc::ChessColor color)
@@ -511,12 +542,12 @@ namespace edc
         uint8_t white_;
         cv::Mat camera_matrix_;
         cv::Mat dist_coeffs_;
+        std::vector<cv::Point2f> board_pix_pos_;
         std::vector<cv::Point2f> key_points_;
         cv::Mat rvec_;
         cv::Mat tvec_;
         cv::Point3d cam2board_;
         double theta_;
-        cv::Point2f center_;
         cv::Mat transform_board_;
         const int8_t square_ = 94;
         const std::vector<cv::Point3f> real_size_ = {

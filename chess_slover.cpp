@@ -98,7 +98,7 @@ namespace edc
                     float angle;
                     vision_.head = 0xA5;
                     uint8_t black, white;
-                    cv::Point2d fix{-3,-1};
+                    cv::Point2d fix{-3, -1};
                     cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
                     point += fix;
                     vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
@@ -231,7 +231,7 @@ namespace edc
                 // cv::putText(show_, "2", pts[2], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
                 // cv::putText(show_, "3", pts[3], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 #endif
-                board_->build_board(pts);
+                board_->build_board(pts, rect);
                 break;
             }
             if (chess_finder.joinable())

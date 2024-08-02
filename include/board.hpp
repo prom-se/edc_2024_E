@@ -142,7 +142,8 @@ namespace edc
         void build_board(std::vector<cv::Point2f> &key_points, cv::RotatedRect &rect)
         {
             angle = rect.angle;
-            size = rect.size;
+            size.width = rect.size.width * 2 / 3;
+            size.height = rect.size.height * 2 / 3;
             init_board_pos(rect);
             key_points_ = key_points;
             center = (key_points[0] + key_points[1] + key_points[2] + key_points[3]) / 4;

@@ -66,27 +66,38 @@ namespace edc
     {
     public:
         Chess() : index_{9}, color_{edc::BLACK}, pos_{cv::Point2d(0, 0)} {}
-        Chess(uint8_t index, edc::ChessColor color, cv::Point2d pos) : index_{index}, color_{color}, pos_{pos} {
-                                                                       };
+        Chess(uint8_t index, edc::ChessColor color, cv::Point2d pos, cv::Point2d remap_pos) : index_{index}, color_{color}, pos_{pos}, remap_pos_{remap_pos} {
+                                                                                              };
 
-        uint8_t index()
+        virtual uint8_t index()
         {
             return index_;
         };
-        edc::ChessColor color()
+        virtual edc::ChessColor color()
         {
             return color_;
         };
 
-        cv::Point2d get_pos()
+        virtual cv::Point2d get_pos()
         {
             return pos_;
+        };
+
+        virtual cv::Point2d get_pos()
+        {
+            return pos_;
+        };
+
+        virtual cv::Point2d get_remap_pos()
+        {
+            return remap_pos_;
         };
 
     private:
         uint8_t index_;
         edc::ChessColor color_;
         cv::Point2d pos_;
+        cv::Point2d remap_pos_;
     };
 
     class Board : public cv::RotatedRect
@@ -108,6 +119,8 @@ namespace edc
             cv::Mat tvec = cv::Mat_<double>(1, 3);
             cv::Mat rvec = cv::Mat_<double>(1, 3);
             cv::solvePnP(real_size_, key_points, camera_matrix_, dist_coeffs_, rvec, tvec, false, cv::SOLVEPNP_IPPE_SQUARE);
+            tvec_ = tvec.clone();
+            rvec_ = rvec.clone();
             cv::Mat rmat;
             cv::Rodrigues(rvec, rmat);
             Eigen::Matrix3d rotation_matrix;
@@ -118,12 +131,6 @@ namespace edc
             cam2board_.x = tvec.at<double>(0);
             cam2board_.y = tvec.at<double>(1);
             cam2board_.z = tvec.at<double>(2);
-            auto transform_mat_ = cv::getPerspectiveTransform(key_points, transform_points);
-            cv::warpPerspective(src, transform_board_, transform_mat_, transform_board_.size());
-#ifdef DEBUG
-            // cv::imshow("debug", transform_board_);
-            std::cout << cam2board_.x << '/' << cam2board_.y << '/' << cam2board_.z << '/' << theta_ << std::endl;
-#endif
         };
 
         void static detect_chess(edc::Board *self, cv::Mat &src)
@@ -143,21 +150,26 @@ namespace edc
 #endif
                 cv::Point2f pix_pt(detection.box.x + detection.box.width / 2,
                                    detection.box.y + detection.box.height / 2);
-
-                cv::Point2d chess_pos;
-                chess_pos.x = (dis2cam * ((pix_pt.x - self->camera_matrix_.at<double>(0, 2)) / self->camera_matrix_.at<double>(0, 0))) - cam2org.x;
-                chess_pos.y = (dis2cam * ((pix_pt.y - self->camera_matrix_.at<double>(1, 2)) / self->camera_matrix_.at<double>(1, 1))) - cam2org.y;
+                std::vector<cv::Point2f> undistort(1);
+                std::vector<cv::Point2f> src = {pix_pt};
+                cv::undistortImagePoints(src, undistort, self->camera_matrix_, self->dist_coeffs_);
+                cv::Point3d chess_pos;
+                chess_pos.x = (dis2cam * ((undistort[0].x - self->camera_matrix_.at<double>(0, 2)) / self->camera_matrix_.at<double>(0, 0))) - cam2org.x;
+                chess_pos.y = (dis2cam * ((undistort[1].y - self->camera_matrix_.at<double>(1, 2)) / self->camera_matrix_.at<double>(1, 1))) - cam2org.y;
+                chess_pos.z = dis2cam;
                 uint8_t index = 9;
                 if (cv::pointPolygonTest(self->key_points_, pix_pt, false) >= 0)
                 {
                     std::vector<double> dis(9);
                     for (size_t i = 0; i < 9; i++)
                     {
-                        dis[i] = cv::norm(chess_pos - self->get_position(i));
+                        dis[i] = cv::norm(cv::Point2d(chess_pos.x, chess_pos.y) - self->get_position(i));
                     }
                     index = std::distance(dis.begin(), std::min_element(dis.begin(), dis.end()));
                 }
-                edc::Chess chess(index, (edc::ChessColor)detection.class_id, chess_pos);
+                std::vector<cv::Point2d> remap_pt;
+                cv::projectPoints(std::vector<cv::Point3d>{chess_pos}, self->rvec_, self->tvec_, self->camera_matrix_, self->dist_coeffs_, remap_pt);
+                edc::Chess chess(index, (edc::ChessColor)detection.class_id, cv::Point2d(chess_pos.x, chess_pos.y),remap_pt[0]);
                 if (chess.color() == edc::BLACK)
                 {
                     self->black_chesses_.emplace_back(chess);
@@ -219,11 +231,13 @@ namespace edc
             {
                 for (size_t col = 0; col < 3; col++)
                 {
-                    if(diff.a.at<uint8_t>(row,col)==1){
-                        src_index=row*3+col;
+                    if (diff.a.at<uint8_t>(row, col) == 1)
+                    {
+                        src_index = row * 3 + col;
                     }
-                    if(diff.a.at<uint8_t>(row,col)==-1){
-                        dst_index=row*3+col;
+                    if (diff.a.at<uint8_t>(row, col) == -1)
+                    {
+                        dst_index = row * 3 + col;
                     }
                 }
             }
@@ -447,6 +461,8 @@ namespace edc
         cv::Mat camera_matrix_;
         cv::Mat dist_coeffs_;
         std::vector<cv::Point2f> key_points_;
+        cv::Mat rvec_;
+        cv::Mat tvec_;
         cv::Point3d cam2board_;
         double theta_;
         cv::Point2f center_;

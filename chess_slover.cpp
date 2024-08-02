@@ -58,22 +58,24 @@ namespace edc
             cam_.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
             cam_.set(cv::CAP_PROP_FPS, 60);
             cam_.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);
-            cam_.set(cv::CAP_PROP_EXPOSURE, 400);
+            cam_.set(cv::CAP_PROP_EXPOSURE, exp);
             cam_.set(cv::CAP_PROP_AUTO_WB, 1);
             // cam_.set(cv::CAP_PROP_WB_TEMPERATURE,4850);
 #ifdef DEBUG
             // cv::namedWindow("src");
             cv::namedWindow("debug");
             cv::namedWindow("show");
-            cv::createTrackbar("h_low", "debug", low, 255);
-            cv::createTrackbar("s_low", "debug", low + 1, 255);
-            cv::createTrackbar("v_low", "debug", low + 2, 255);
-            cv::createTrackbar("h_high", "debug", high, 255);
-            cv::createTrackbar("s_high", "debug", high + 1, 255);
-            cv::createTrackbar("v_high", "debug", high + 2, 255);
+            cv::createTrackbar("exp", "debug", &exp, 1000);
+            cv::createTrackbar("l_low", "debug", low, 255);
+            cv::createTrackbar("a_low", "debug", low + 1, 255);
+            cv::createTrackbar("b_low", "debug", low + 2, 255);
+            cv::createTrackbar("l_high", "debug", high, 255);
+            cv::createTrackbar("a_high", "debug", high + 1, 255);
+            cv::createTrackbar("b_high", "debug", high + 2, 255);
 #endif
             while (true)
             {
+                cam_.set(cv::CAP_PROP_EXPOSURE, exp);
                 cam_.read(src_);
                 if (!src_.empty())
                 {
@@ -98,8 +100,10 @@ namespace edc
                     uint8_t black, white;
 
                     cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
-                    vision_.chess_x = point.x == 0 ? vision_.chess_x : point.x;
-                    vision_.chess_y = point.y == 0 ? vision_.chess_y : point.y;
+                    point.x -= 5;
+                    point.y -= 8;
+                    vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
+                    vision_.chess_y = point.y > 0 ? point.y : vision_.chess_y;
                     if (robot_.task == 0x00)
                     {
                         vision_.dst_x = board_->get_position(board_->get_dst()).x;
@@ -124,8 +128,10 @@ namespace edc
                         board_->get_diff(src_index, dst_index);
                         src = board_->get_position(src_index);
                         dst = board_->get_position(dst_index);
-                        vision_.chess_x = src.x == 0 ? vision_.chess_x : src.x;
-                        vision_.chess_y = src.y == 0 ? vision_.chess_y : src.y;
+                        src.x -= 5;
+                        src.y -= 9;
+                        vision_.chess_x = src.x > 0 ? src.x : vision_.chess_x;
+                        vision_.chess_y = src.y > 0 ? src.y : vision_.chess_y;
                         vision_.dst_x = dst.x;
                         vision_.dst_y = dst.y;
                     }
@@ -160,7 +166,7 @@ namespace edc
             // 预处理
             cv::Mat undistort;
             cv::undistort(src_, undistort, cv::Mat(3, 3, CV_64FC1, const_cast<double *>(camera_matrix.data())), cv::Mat(1, 5, CV_64FC1, const_cast<double *>(dist_coeffs.data())));
-            show_=undistort.clone();
+            show_ = undistort.clone();
             std::thread chess_finder(std::bind(&edc::Board::detect_chess, board_.get(), show_));
             cv::Mat lab(cv::Mat::zeros(720, 1280, CV_8UC3));
             cv::Mat bin(cv::Mat::zeros(720, 1280, CV_8UC1));
@@ -241,7 +247,8 @@ namespace edc
             cv::imshow("show", show_);
 #endif
         };
-        int low[3] = {89, 43, 0};
+        int exp = 300;
+        int low[3] = {35, 43, 0};
         int high[3] = {255, 185, 183};
         cv::Mat show_;
         cv::Mat src_;

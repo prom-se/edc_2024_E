@@ -147,7 +147,7 @@ namespace edc
             for (auto &detection : detections)
             {
 #ifdef DEBUG
-                cv::putText(src, detection.className, detection.box.tl(), cv::LINE_AA, 1, detection.color);
+                cv::putText(src, detection.className, detection.box.tl(), cv::LINE_AA, 2, detection.color);
                 cv::rectangle(src, detection.box, detection.color);
 #endif
                 cv::Point2f pix_pt(detection.box.x + detection.box.width / 2,

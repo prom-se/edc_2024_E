@@ -26,6 +26,7 @@ public:
     explicit VisionSerial(const char *dev_name, const int baud_rate)
         : isOk{false}, dev_name_{dev_name}, baud_rate_{baud_rate}, serial_{new CSerialPort(dev_name_)}
     {
+        std::memset(robot_pack_.bytes, 0, 4);
         watchdog_thread_ = std::thread(&VisionSerial::WatchDogThreadFun, this);
         send_thread_ = std::thread(&VisionSerial::SendThreadFun, this);
         recive_thread_ = std::thread(&VisionSerial::ReceiveThreadFun, this);
@@ -64,7 +65,8 @@ public:
         vision_pack_.msg = vision;
     };
 
-    void get_robot(RobotMsg &robot){
+    void get_robot(RobotMsg &robot)
+    {
         robot = robot_pack_.msg;
     };
 
@@ -94,15 +96,14 @@ private:
     {
         while (true)
         {
-            std::this_thread::sleep_for(std::chrono::seconds(10));
-            std::vector<uint8_t> head(2);
-            std::vector<uint8_t> bytes(sizeof(RobotPack) - 2);
-            serial_->readData(head.data(), 2);
-            if (head[0] == 0xA5 && head[1] == 0x00)
+            // std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::vector<uint8_t> head(1);
+            std::vector<uint8_t> bytes(sizeof(RobotPack) - 1);
+            serial_->readData(head.data(), 1);
+            if (head[0] == 0xA5)
             {
-                serial_->readData(bytes.data(), sizeof(RobotPack) - 2);
                 bytes.reserve(sizeof(RobotPack));
-                bytes.insert(bytes.begin(), head[1]);
+                serial_->readData(bytes.data(), 3);
                 bytes.insert(bytes.begin(), head[0]);
                 std::memcpy(robot_pack_.bytes, bytes.data(), sizeof(RobotPack));
             }

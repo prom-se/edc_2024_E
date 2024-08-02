@@ -468,25 +468,15 @@ namespace edc
             {
                 totle[i] = black[i] | white[i];
             }
-            if (task == 0x00 || task == 0x02)
+            if (task == 0x00 || task == 0x01||task == 0x02)
             {
                 cv::Mat(3, 3, CV_8UC1, const_cast<uint8_t *>(totle.data())).copyTo(now_chess_map_);
             }
-            else if (task == 0x01)
+            else if (task == 0x03)
             {
                 cv::Mat(3, 3, CV_8UC1, const_cast<uint8_t *>(totle.data())).copyTo(new_chess_map_);
             }
             update_score(black_index, white_index);
-            if (task == 0x02)
-            {
-                auto color = edc::BLACK;
-                auto index = get_dst();
-            }
-            else if (task == 0x03)
-            {
-                auto color = edc::WHITE;
-                auto index = get_dst();
-            }
         };
 
         void update_score(std::vector<uint8_t> &black, std::vector<uint8_t> &white)

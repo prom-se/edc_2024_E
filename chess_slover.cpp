@@ -98,25 +98,47 @@ namespace edc
                     float angle;
                     vision_.head = 0xA5;
                     uint8_t black, white;
-                    cv::Point2d fix{-5, 5};
+                    cv::Point2d fix{-5, 0};
                     cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
-                    point += fix;
-                    vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
-                    vision_.chess_y = point.y > 5 ? point.y : vision_.chess_y;
                     if (robot_.task == 0x00)
                     {
+                        if (board_->get_self_color() == edc::BLACK)
+                        {
+                            point.x += 3;
+                            point.y += -5;
+                        }
+                        else if (board_->get_self_color() == edc::WHITE)
+                        {
+                            point.x -= 4;
+                            point.y -= 3;
+                        }
+                        point += fix;
+                        vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
+                        vision_.chess_y = point.y > 5 ? point.y : vision_.chess_y;
                         vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst())).x;
                         vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst())).y;
                     }
                     else if (robot_.task == 0x01)
                     {
-                        vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1)).x;
-                        vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::BLACK) - 1)).y;
+                        point = board_->remap_position(board_->get_src_chess(edc::BLACK));
+                        point += fix;
+                        point.x += 3;
+                        point.y += -5;
+                        vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
+                        vision_.chess_y = point.y > 5 ? point.y : vision_.chess_y;
+                        vision_.dst_x = board_->remap_position(board_->get_position(robot_.pos - 1)).x;
+                        vision_.dst_y = board_->remap_position(board_->get_position(robot_.pos - 1)).y;
                     }
                     else if (robot_.task == 0x02)
                     {
-                        vision_.dst_x = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1)).x;
-                        vision_.dst_y = board_->remap_position(board_->get_position(board_->get_dst_by_color(edc::WHITE) - 1)).y;
+                        point = board_->remap_position(board_->get_src_chess(edc::WHITE));
+                        point += fix;
+                        point.x -= 4;
+                        point.y -= 3;
+                        vision_.chess_x = point.x > 0 ? point.x : vision_.chess_x;
+                        vision_.chess_y = point.y > 5 ? point.y : vision_.chess_y;
+                        vision_.dst_x = board_->remap_position(board_->get_position(robot_.pos - 1)).x;
+                        vision_.dst_y = board_->remap_position(board_->get_position(robot_.pos - 1)).y;
                     }
                     else if (robot_.task == 0x03)
                     {
@@ -133,8 +155,8 @@ namespace edc
                         vision_.dst_x = dst.x;
                         vision_.dst_y = dst.y;
                     }
-                    vision_.dst_x += fix.x + 5;
-                    vision_.dst_y += fix.y - 3;
+                    vision_.dst_x += fix.x + 4;
+                    vision_.dst_y += fix.y - 2;
                     if (vision_.chess_x < 0)
                     {
                         vision_.chess_x = 0;
@@ -152,6 +174,7 @@ namespace edc
                         vision_.dst_y = 0;
                     }
                     std::cout << board_->get_self_color() << '/';
+                    std::cout << robot_.task << '/';
                     std::cout << "src:" << vision_.chess_x << '/' << vision_.chess_y << '/';
                     std::cout << "dst" << vision_.dst_x << '/' << vision_.dst_y << std::endl;
                     serial_->update_vision(vision_);
@@ -248,8 +271,8 @@ namespace edc
             cv::imshow("show", show_);
 #endif
         };
-        int exp = 300;
-        int low[3] = {35, 43, 0};
+        int exp = 700;
+        int low[3] = {51, 43, 0};
         int high[3] = {255, 185, 183};
         cv::Mat show_;
         cv::Mat src_;

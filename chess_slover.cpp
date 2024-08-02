@@ -272,7 +272,7 @@ namespace edc
 #endif
         };
         int exp = 700;
-        int low[3] = {51, 43, 0};
+        int low[3] = {85, 43, 0};
         int high[3] = {255, 185, 183};
         cv::Mat show_;
         cv::Mat src_;

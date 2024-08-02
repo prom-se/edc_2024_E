@@ -155,15 +155,16 @@ namespace edc
                                    detection.box.y + detection.box.height / 2);
 
                 cv::Point2d chess_pos;
-                chess_pos.x = (dis2cam * ((pix_pt.x - self->camera_matrix_.at<double>(0, 2)) / self->camera_matrix_.at<double>(0, 0))) - cam2org.x;
-                chess_pos.y = (dis2cam * ((pix_pt.y - self->camera_matrix_.at<double>(1, 2)) / self->camera_matrix_.at<double>(1, 1))) - cam2org.y;
+                // chess_pos.x = (dis2cam * ((pix_pt.x - self->camera_matrix_.at<double>(0, 2)) / self->camera_matrix_.at<double>(0, 0))) - cam2org.x;
+                // chess_pos.y = (dis2cam * ((pix_pt.y - self->camera_matrix_.at<double>(1, 2)) / self->camera_matrix_.at<double>(1, 1))) - cam2org.y;
+                chess_pos = self->remap_position(pix_pt);
                 uint8_t index = 9;
                 if (cv::pointPolygonTest(self->key_points_, pix_pt, false) >= 0)
                 {
                     std::vector<double> dis(9);
                     for (size_t i = 0; i < 9; i++)
                     {
-                        dis[i] = cv::norm(chess_pos - self->get_position(i));
+                        dis[i] = cv::norm(chess_pos - self->get_pnp_position(i));
                     }
                     index = std::distance(dis.begin(), std::min_element(dis.begin(), dis.end()));
                 }

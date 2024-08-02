@@ -51,14 +51,13 @@ namespace edc
         cv::Point3d(32, 32, 0),
     };
 
-    //TODO：undistort
+    // TODO：undistort
     const std::array<cv::Point2d, 4> fix_point = {
         cv::Point2d(300, 24),
         cv::Point2d(1238, 12),
         cv::Point2d(1237, 421),
         cv::Point2d(307, 428),
     };
-    
 
     const double dis2cam = 240; // mm
 
@@ -131,7 +130,7 @@ namespace edc
             cam2board_.z = tvec.at<double>(2);
             for (auto &pt : board2pos)
             {
-                center2pos_.emplace_back(pt.x*cos(theta_),pt.y*sin(theta_));
+                center2pos_.emplace_back(pt.x * cos(theta_), pt.y * sin(theta_));
             }
         };
 
@@ -342,6 +341,7 @@ namespace edc
         uint8_t check_all_step(std::vector<uint8_t> &foe_index, uint8_t check_index)
         {
             uint8_t score = 0;
+            uint8_t temp = 0;
             for (size_t i = 0; i < win_map.size(); i++)
             {
                 auto check = win_map[i];
@@ -352,11 +352,19 @@ namespace edc
                     {
                         if (std::count(check.begin(), check.end(), foe_index[j]))
                         {
-                            score--;
+                            temp++;
                             break;
                         };
                     }
                 };
+            }
+            if (temp == 1)
+            {
+                score++;
+            }
+            else
+            {
+                score--;
             }
             return score;
         }

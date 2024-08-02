@@ -345,6 +345,9 @@ namespace edc
 
         cv::Point2d get_position(uint8_t index)
         {
+            if(index>8){
+                return cv::Point2d(0,0);
+            }
             return board_pix_pos_[index];
         };
 

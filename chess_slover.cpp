@@ -155,7 +155,7 @@ namespace edc
                         vision_.dst_x = dst.x;
                         vision_.dst_y = dst.y;
                     }
-                    vision_.dst_x += fix.x + 4;
+                    vision_.dst_x += fix.x + 1;
                     vision_.dst_y += fix.y - 2;
                     if (vision_.chess_x < 0)
                     {
@@ -174,7 +174,7 @@ namespace edc
                         vision_.dst_y = 0;
                     }
                     std::cout << board_->get_self_color() << '/';
-                    std::cout << robot_.task << '/';
+                    std::cout << (int)robot_.task << '/';
                     std::cout << "src:" << vision_.chess_x << '/' << vision_.chess_y << '/';
                     std::cout << "dst" << vision_.dst_x << '/' << vision_.dst_y << std::endl;
                     serial_->update_vision(vision_);

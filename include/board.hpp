@@ -118,6 +118,8 @@ namespace edc
             cv::Mat tvec = cv::Mat_<double>(1, 3);
             cv::Mat rvec = cv::Mat_<double>(1, 3);
             cv::solvePnP(real_size_, key_points, camera_matrix_, dist_coeffs_, rvec, tvec, false, cv::SOLVEPNP_IPPE_SQUARE);
+            rvec_ = rvec;
+            tvec_ = tvec;
             cv::Mat rmat;
             cv::Rodrigues(rvec, rmat);
             Eigen::Matrix3d rotation_matrix;
@@ -273,6 +275,17 @@ namespace edc
             double k_y = 112.5 / ((fix_point[2] - fix_point[0] + fix_point[3] - fix_point[1]) / 2).y;
             return cv::Point2d((pix_pt.x - (fix_point[0] + fix_point[3]).x / 2) * k_x, (pix_pt.y - (fix_point[0] + fix_point[1]).y / 2) * k_y);
         }
+
+        cv::Point2d get_pnp_position(uint8_t index)
+        {
+            double x = (cam2board_ + board2pos[index]).x;
+            double y = (cam2board_ + board2pos[index]).y;
+            double z = cam2board_.z;
+            std::vector<cv::Point3f> pt{cv::Point3f(x,y,z)};
+            std::vector<cv::Point3f> img_pt;
+            cv::projectPoints(pt,rvec_,tvec_,camera_matrix_,dist_coeffs_,img_pt);
+            return cv::Point2d(img_pt[0].x, img_pt[0].y);
+        };
 
         cv::Point2d get_position(uint8_t index)
         {
@@ -477,6 +490,8 @@ namespace edc
         cv::Mat camera_matrix_;
         cv::Mat dist_coeffs_;
         std::vector<cv::Point2f> key_points_;
+        cv::Mat rvec_;
+        cv::Mat tvec_;
         cv::Point3d cam2board_;
         double theta_;
         cv::Point2f center_;

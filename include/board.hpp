@@ -277,13 +277,9 @@ namespace edc
 
         cv::Point2d get_position(uint8_t index)
         {
-            if(!center2pos_.empty()){
-            double x = (remap_position(cv::Point2d(center_) + center2pos_[index]).x);
-            double y = (remap_position(cv::Point2d(center_) + center2pos_[index]).y);
+            double x = (cam2board_ + board2pos[index] - cam2org).x;
+            double y = (cam2board_ + board2pos[index] - cam2org).y;
             return cv::Point2d(x, y);
-            }else{
-                return cv::Point2d(0, 0);
-            }
         };
 
         cv::Point2d get_src_chess(edc::ChessColor color)

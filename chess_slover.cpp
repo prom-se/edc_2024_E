@@ -97,7 +97,7 @@ namespace edc
                     vision_.head = 0xA5;
                     uint8_t black, white;
 
-                    cv::Point2d point = board_->get_src_chess(board_->get_self_color());
+                    cv::Point2d point = board_->remap_position(board_->get_src_chess(board_->get_self_color()));
                     vision_.chess_x = point.x == 0 ? vision_.chess_x : point.x;
                     vision_.chess_y = point.y == 0 ? vision_.chess_y : point.y;
                     if (robot_.task == 0x00)

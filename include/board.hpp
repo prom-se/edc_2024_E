@@ -40,23 +40,25 @@ namespace edc
         -107.2, -106.7, 0};
 
     const std::array<cv::Point3d, 9> board2pos = {
-        cv::Point3d(-30, -30, 0),
-        cv::Point3d(0, -30, 0),
-        cv::Point3d(30, -30, 0),
-        cv::Point3d(-30, 0, 0),
+        cv::Point3d(-32, -32, 0),
+        cv::Point3d(0, -32, 0),
+        cv::Point3d(32, -32, 0),
+        cv::Point3d(-32, 0, 0),
         cv::Point3d(0, 0, 0),
-        cv::Point3d(30, 0, 0),
-        cv::Point3d(-30, 30, 0),
-        cv::Point3d(0, 30, 0),
-        cv::Point3d(30, 30, 0),
+        cv::Point3d(32, 0, 0),
+        cv::Point3d(-32, 32, 0),
+        cv::Point3d(0, 32, 0),
+        cv::Point3d(32, 32, 0),
     };
 
+    //TODO：undistort
     const std::array<cv::Point2d, 4> fix_point = {
         cv::Point2d(300, 24),
         cv::Point2d(1238, 12),
-        cv::Point2d(307, 428),
         cv::Point2d(1237, 421),
+        cv::Point2d(307, 428),
     };
+    
 
     const double dis2cam = 240; // mm
 
@@ -69,8 +71,8 @@ namespace edc
     {
     public:
         Chess() : index_{9}, color_{edc::BLACK}, pos_{cv::Point2d(0, 0)} {}
-        Chess(uint8_t index, edc::ChessColor color, cv::Point2d pos) : index_{index}, color_{color}, pos_{pos} {
-                                                                       };
+        Chess(uint8_t index, edc::ChessColor color, cv::Point2d pos, cv::Point2d pix_pos) : index_{index}, color_{color}, pos_{pos}, pix_pos_{pix_pos} {
+                                                                                            };
 
         uint8_t index()
         {
@@ -86,10 +88,16 @@ namespace edc
             return pos_;
         };
 
+        cv::Point2d get_pix_pos()
+        {
+            return pix_pos_;
+        };
+
     private:
         uint8_t index_;
         edc::ChessColor color_;
         cv::Point2d pos_;
+        cv::Point2d pix_pos_;
     };
 
     class Board : public cv::RotatedRect
@@ -121,6 +129,10 @@ namespace edc
             cam2board_.x = tvec.at<double>(0);
             cam2board_.y = tvec.at<double>(1);
             cam2board_.z = tvec.at<double>(2);
+            for (auto &pt : board2pos)
+            {
+                center2pos_.emplace_back(pt.x*cos(theta_),pt.y*sin(theta_));
+            }
         };
 
         void static detect_chess(edc::Board *self, cv::Mat src)
@@ -154,7 +166,7 @@ namespace edc
                     }
                     index = std::distance(dis.begin(), std::min_element(dis.begin(), dis.end()));
                 }
-                edc::Chess chess(index, (edc::ChessColor)detection.class_id, chess_pos);
+                edc::Chess chess(index, (edc::ChessColor)detection.class_id, chess_pos, pix_pt);
                 if (chess.color() == edc::BLACK)
                 {
                     self->black_chesses_.emplace_back(chess);
@@ -216,11 +228,13 @@ namespace edc
             {
                 for (size_t col = 0; col < 3; col++)
                 {
-                    if(diff.a.at<uint8_t>(row,col)==1){
-                        src_index=row*3+col;
+                    if (diff.a.at<uint8_t>(row, col) == 1)
+                    {
+                        src_index = row * 3 + col;
                     }
-                    if(diff.a.at<uint8_t>(row,col)==-1){
-                        dst_index=row*3+col;
+                    if (diff.a.at<uint8_t>(row, col) == -1)
+                    {
+                        dst_index = row * 3 + col;
                     }
                 }
             }
@@ -249,18 +263,27 @@ namespace edc
             }
         }
 
-        cv::Point2d remap_position(const cv::Point2d pix_pt){
-            //26.4 12.5 
+        cv::Point2d remap_position(const cv::Point2d pix_pt)
+        {
+            // 26.4 11.5
+            if (pix_pt.x == 0 && pix_pt.y == 0)
+            {
+                return pix_pt;
+            }
+            double k_x = 264 / ((fix_point[1] - fix_point[0] + fix_point[2] - fix_point[3]) / 2).x;
+            double k_y = 112.5 / ((fix_point[2] - fix_point[0] + fix_point[3] - fix_point[1]) / 2).y;
+            return cv::Point2d((pix_pt.x - (fix_point[0] + fix_point[3]).x / 2) * k_x, (pix_pt.y - (fix_point[0] + fix_point[1]).y / 2) * k_y);
         }
 
         cv::Point2d get_position(uint8_t index)
         {
-            double x = (cam2board_ + board2pos[index] - cam2org).x;
-            double y = (cam2board_ + board2pos[index] - cam2org).y;
+            if(!center2pos_.empty()){
+            double x = (remap_position(cv::Point2d(center_) + center2pos_[index]).x);
+            double y = (remap_position(cv::Point2d(center_) + center2pos_[index]).y);
             return cv::Point2d(x, y);
-#ifdef DEBUG
-            std::cout << "index:" << index << x << '/' << y << std::endl;
-#endif
+            }else{
+                return cv::Point2d(0, 0);
+            }
         };
 
         cv::Point2d get_src_chess(edc::ChessColor color)
@@ -279,8 +302,8 @@ namespace edc
                 }
                 std::sort(chesses.begin(), chesses.end(), [](auto &a, auto &b)
                           { return a.index() > b.index(); });
-                points.x = chesses[0].get_pos().x;
-                points.y = chesses[0].get_pos().y;
+                points.x = chesses[0].get_pix_pos().x;
+                points.y = chesses[0].get_pix_pos().y;
             }
             else if (color == edc::WHITE)
             {
@@ -295,8 +318,8 @@ namespace edc
                 }
                 std::sort(chesses.begin(), chesses.end(), [](auto &a, auto &b)
                           { return a.index() > b.index(); });
-                points.x = chesses[0].get_pos().x;
-                points.y = chesses[0].get_pos().y;
+                points.x = chesses[0].get_pix_pos().x;
+                points.y = chesses[0].get_pix_pos().y;
             }
             return points;
         }
@@ -435,6 +458,7 @@ namespace edc
             white_ = white_index;
         }
 
+        std::vector<cv::Point2d> center2pos_;
         std::vector<edc::Chess> black_chesses_;
         std::vector<edc::Chess> white_chesses_;
         cv::Mat new_chess_map_;
@@ -453,7 +477,7 @@ namespace edc
         double theta_;
         cv::Point2f center_;
         cv::Mat transform_board_;
-        const int8_t square_ = 90;
+        const int8_t square_ = 94;
         const std::vector<cv::Point3f> real_size_ = {
             cv::Point3f(-square_ / 2, square_ / 2, 0),
             cv::Point3f(square_ / 2, square_ / 2, 0),

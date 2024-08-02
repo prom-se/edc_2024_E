@@ -123,6 +123,25 @@ namespace edc
             std::vector<cv::Point2f> corner(4);
             std::vector<cv::Point2f> middle(4);
             rect.points(corner);
+            auto pts = corner;
+            std::sort(pts.begin(), pts.end(), [](const auto &a, const auto &b)
+                      { return a.x < b.x; });
+            std::vector<cv::Point2f> left;
+            left.emplace_back(pts[0]);
+            left.emplace_back(pts[1]);
+            std::vector<cv::Point2f> right;
+            right.emplace_back(pts[2]);
+            right.emplace_back(pts[3]);
+            std::sort(left.begin(), left.end(), [](const auto &a, const auto &b)
+                      { return a.y < b.y; });
+            std::sort(right.begin(), right.end(), [](const auto &a, const auto &b)
+                      { return a.y < b.y; });
+
+            corner[0] = left[1];
+            corner[1] = left[0];
+            corner[2] = right[0];
+            corner[3] = right[1];
+
             middle[0] = (corner[1] + corner[2]) / 2;
             middle[1] = (corner[0] + corner[1]) / 2;
             middle[2] = (corner[2] + corner[3]) / 2;
@@ -345,8 +364,9 @@ namespace edc
 
         cv::Point2d get_position(uint8_t index)
         {
-            if(index>8){
-                return cv::Point2d(0,0);
+            if (index > 8)
+            {
+                return cv::Point2d(0, 0);
             }
             return board_pix_pos_[index];
         };
@@ -471,7 +491,7 @@ namespace edc
             {
                 totle[i] = black[i] | white[i];
             }
-            if (task == 0x00 || task == 0x01||task == 0x02)
+            if (task == 0x00 || task == 0x01 || task == 0x02)
             {
                 cv::Mat(3, 3, CV_8UC1, const_cast<uint8_t *>(totle.data())).copyTo(now_chess_map_);
             }
